@@ -1,9 +1,13 @@
 import time
 import os
 import subprocess
-import urllib.request
+import json
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+import pymysql
+import datetime
+# from flask_jwt import current_identity
 from flask_cors import CORS
-
+import magic
 from flask_mysqldb import MySQL
 import PyPDF2 as pypdf
 from flask_mail import Mail, Message
@@ -15,6 +19,8 @@ from werkzeug.utils import secure_filename
 welcome_message = "Welcome to Online Printing. You have successfully registered with us.\nThank you..."
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'smit-->p-->this__is~secret886651234'
+jwt = JWTManager(app)
 CORS(app)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -23,10 +29,12 @@ app.config['MAIL_USERNAME'] = 'ssmmiitt007@gmail.com'
 app.config['MAIL_PASSWORD'] = 'SP@88665'
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
+app.config['ORDER_MAIL'] = "henishj94@gmail.com"
 mail = Mail(app)
 
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PORT'] = 3306
 app.config['MYSQL_PASSWORD'] = 'root1234'
 app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
@@ -98,6 +106,115 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+@app.route('/CustomerLogin', methods=['POST'])
+def CustomerLogin():
+    json_data = request.json
+    email = json_data.get('Email_Id', '')
+    password = json_data.get('Password', '')
+    if not email or not password:
+        return jsonify({"message": "Credential Needed"})
+    try:
+        cur = mysql.connection.cursor()
+        # cur = con.cursor(pymysql.cursors.DictCursor)
+        sql = """SELECT *
+                 FROM `Customer_Master`
+                 where Email_Id='""" + email + """' and Password='""" + password + """' and status='1'
+              """
+        # data = (Email_Id, password)
+        cur.execute(sql)
+        rows = cur.fetchone()
+        cur.close()
+        print(rows)
+        # mysql.connection.close()
+        if (len(rows) > 0):
+            dic1 = {}
+
+            dic2 = {}
+            dic3 = {}
+
+            dic1["access_token"] = create_access_token(identity=rows[3])
+            # dic1["refresh_token"] = create_refresh_token(identity=i[3])
+
+            dic2["role"] = "Customer"
+            dic2["uuid"] = rows[0]
+
+            dic3["displayName"] = rows[1]
+            dic3["email"] = rows[2]
+            dic3["photoURL"] = ""
+
+            dic2["data"] = dic3
+
+            dic1["user"] = dic2
+
+            # res = jsonify(dic1)
+            # res.status_code = 200
+            return dic1
+
+            # return res
+
+        return jsonify({"message": "Enter Valid Email_Id or Password"}), 401
+
+    except Exception as e:
+        print(e)
+        return ({"error": "There was an error"})
+
+def check_email(email):
+    qry = "select Email_Id from customer_master where Email_Id = %s"
+    # cur = mysql2.connection.cursor()
+    con = mysql.connect()
+    cursor = con.cursor()
+    cursor.execute(qry, (email,))
+    result = cursor.fetchone()
+    cursor.close()
+    con.close()
+    if result:
+        return 1
+    else:
+        return 0
+
+@app.route("/Customer", methods=["POST"])
+def register_user():  # add new Customer -- MYSQL table : Customer_Master
+    try:
+        @copy_current_request_context
+        def send_email(receiver):
+            msg = Message('Welcome to Print', sender=app.config['MAIL_USERNAME'], recipients=[receiver])
+            print(msg)
+            msg.body = welcome_message
+            mail.send(msg)
+
+        now = datetime.datetime.now()
+        dt_string = now.strftime("%Y-%m-%d %H:%M:%S")
+        json_data = request.json
+        email = json_data.get('Email_Id', '')
+        first_name = json_data.get('FirstName', '')
+        last_name = json_data.get('LastName', '')
+        password = json_data.get('Password', '')
+        mobile = json_data.get('Mobile', 0)
+        if not email or not first_name or not last_name or not password:
+            return {"message": "Fields are missing"}
+        if check_email(email):
+            return {"message": "Email is already in use"}
+        status = 1
+        sql = """INSERT INTO `Customer_Master` (`FirstName`, `LastName`, `Email_Id`, `Password`, `status`, `dateAdded`, `mobile`)
+                 VALUES (%s,%s,%s,%s,%s,%s, %s);"""
+        data = (first_name, last_name, email, password, status, dt_string, mobile)
+        print("SQL QUERY AND DATA ", sql, data)
+        cur = mysql.connection.cursor()
+        cur.execute(sql, data)
+        mysql.connection.commit()
+        cur.close()
+        threading.Thread(target=send_email, args=(email,)).start()
+
+        resp = jsonify({'message': 'Customer Is Added Successfully'})
+        resp.status_code = 200
+        return resp
+    except Exception as e:
+        cur.close()
+        mysql.connection.close()
+        print(e)
+        return {[]}, 400
+
+
 @app.route('/register', methods=['POST'])
 def register():
     @copy_current_request_context
@@ -139,7 +256,7 @@ def register():
 
     return "Server is Up and running"
 
-
+# @jwt_required
 @app.route('/multiple-files-upload', methods=['POST'])
 def upload_file():
     print("In Upload API")
@@ -199,13 +316,13 @@ def upload_file():
             errors[file.filename] = 'File type is not allowed'
     num_dict['Total Pages'] = total_pages
     if size == "A4" and typ.lower() == 'color':
-        num_dict['Total cost $'] = A4_C(total_pages)
+        num_dict['Total cost $'] = round(A4_C(total_pages),2)
     if size == "A4" and typ.lower() == 'bw':
-        num_dict['Total cost $'] = A4_BC(total_pages)
+        num_dict['Total cost $'] = round(A4_BC(total_pages), 2)
     if size == "A3" and typ.lower() == 'color':
-        num_dict['Total cost $'] = A3_C(total_pages)
+        num_dict['Total cost $'] = round(A3_C(total_pages), 2)
     if size == "A3" and typ.lower() == 'bw':
-        num_dict['Total cost $'] = A3_BC(total_pages)
+        num_dict['Total cost $'] = round(A3_BC(total_pages), 2)
 
     if success and errors:
         errors['message'] = 'File(s) successfully uploaded'
@@ -224,7 +341,82 @@ def upload_file():
 
 job_msg = "Your job as an email posted"
 
+# @jwt_required
+@app.route('/place/order', methods=["POST"])
+def place_order():
+    try:
+        json_data = request.json
+        user_id = json_data.get('user_id', 0)
+        size, typ = json_data.get('type', ' _ ').split('_')
+        files = json_data.get('files', [])
+        amount = json_data.get('amount')
+        print(type(json.dumps(files)))
+        print("++" * 20, type(user_id), size, typ, type(files), amount)
+        qry = "insert into orders (user_id, size, type, files, amount) values (%s,%s,%s,%s,%s)"
+        values = (user_id, size, typ, json.dumps(files), amount)
+        cur = mysql.connection.cursor()
+        cur.execute(qry, values)
+        mysql.connection.commit()
+        last_id = cur.lastrowid
+        return jsonify({"message": "OK", "order_id": last_id, "amount": amount}), 200
 
+    except Exception as e:
+        return {"message": "Internal Server Error"}
+
+#
+# @app.route("/get", methods=["GET"])
+# def fun():
+#     qry = "select * from orders"
+#     cur = mysql.connection.cursor()
+#     cur.execute(qry)
+#     res = list(cur.fetchall())
+#     for items in res:
+#         items = list(items)
+#         items[4] = json.loads(items[4], object_hook=str)
+#         print(items[4])
+#
+#     print(res)
+#     return {"Res": res}
+
+send = """
+<h1>Your Order have been placed. following are the details
+"""
+
+# @jwt_required
+@app.route('/confirm/order', methods=["POST"])
+def confirm_payment():
+    @copy_current_request_context
+    def send_attachment(order_id: int, files: list, receiver: str):
+        msg = Message('Order', sender=app.config['MAIL_USERNAME'], recipients=[app.config['ORDER_MAIL']])
+        msg.body = f"Order has been received with <order_id:{order_id}> from <{receiver}>"
+        print(files)
+        for file in files:
+            buf = open(os.path.join(app.config['UPLOAD_FOLDER'], file), 'rb').read()
+            print(magic.from_buffer(buf, mime=True))
+            msg.attach(file, magic.from_buffer(buf, mime=True), buf)
+        mail.send(msg)
+        msg = Message(job_msg, sender=app.config['MAIL_USERNAME'], recipients=[receiver])
+        msg.body = send + f"\norder_id:{order_id} \n files:{files}"
+        mail.send(msg)
+
+    json_data = request.json
+    order_id = json_data.get('order_id', 0)
+    user_id = json_data.get('user_id', 0)
+    files = json_data.get('fileNames', [])
+    amount = json_data.get('Total_Cost', 0)
+    email = json_data.get('email', '')
+    size, typ = json_data.get('docFormat', ' _ ').split('_')
+    typ = "color" if typ.lower() == "c" else "black & white"
+    if order_id and files and amount and email:
+        qry = "insert into payments (order_id, user_id,amount, is_successful) values (%s, %s, %s, %s)"
+        cur = mysql.connection.cursor()
+        cur.execute(qry, (order_id, user_id, amount, 1))
+        mysql.connection.commit()
+        threading.Thread(target=send_attachment, args=(order_id, files, email)).start()
+        return {"message": "OK"}, 200
+
+
+# @jwt_required
 @app.route('/uploads', methods=["POST"])
 def attach_mail():
     files_details = []
@@ -243,8 +435,8 @@ def attach_mail():
         files_details.append([files, files.mimetype])
     print(files_details)
     threading.Thread(target=send_with_attachment, args=('ssssmmmmiiiitttt@gmail.com', files_details)).start()
-    return jsonify({"message":"OK"})
+    return jsonify({"message": "OK"})
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True, threaded=True)
+    app.run(port=8000, debug=True, threaded=True)
