@@ -17,8 +17,8 @@ services:
     volumes:
       - ./db-scripts:/docker-entrypoint-initdb.d
       - ./mysql_db_data_container:/var/lib/mysql
-#    networks:
-#      - print
+    networks:
+      - print
 
   adminer:
     image: adminer
@@ -31,6 +31,8 @@ services:
       - db
     depends_on:
       - db
+    networks:
+      - print
 
   appl:
     # dockerfile: Dockerfile
@@ -45,8 +47,8 @@ services:
       - db
     depends_on:
       - db
-#    networks:
-#      - print
+    networks:
+      - print
         
 networks:
   print:

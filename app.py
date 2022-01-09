@@ -2,6 +2,7 @@ import time
 import os
 import subprocess
 import json
+import socket
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 import pymysql
 import datetime
@@ -17,6 +18,9 @@ from flask import Flask, request, redirect, jsonify, copy_current_request_contex
 from werkzeug.utils import secure_filename
 
 welcome_message = "Welcome to Online Printing. You have successfully registered with us.\nThank you..."
+hostname = socket.gethostname()
+ip_address = socket.gethostbyname(hostname)
+print(ip_address)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'smit-->p-->this__is~secret886651234'
@@ -439,4 +443,4 @@ def attach_mail():
 
 
 if __name__ == "__main__":
-    app.run(port=8000, debug=True, threaded=True)
+    app.run(host="52.66.245.159",port=8000, debug=True, threaded=True)
