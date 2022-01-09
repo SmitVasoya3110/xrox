@@ -32,10 +32,10 @@ app.config['MAIL_USE_SSL'] = True
 app.config['ORDER_MAIL'] = "henishj94@gmail.com"
 mail = Mail(app)
 
-app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_HOST'] = 'db'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PORT'] = 3306
-app.config['MYSQL_PASSWORD'] = 'root1234'
+app.config['MYSQL_PASSWORD'] = 'print1234'
 app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
 

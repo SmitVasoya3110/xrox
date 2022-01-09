@@ -1,12 +1,12 @@
-FROM python:3.9-alpine3.15
+FROM python:3
 ENV PYTHONUNBUFFERED=1
 WORKDIR /code
-COPY ./requirement.txt /code/
+COPY ./req.txt /code/
 RUN apt update
 RUN apt -y upgrade
-RUN apt install -y libreoffice
+#RUN apt install -y libreoffice
 RUN apt-get install libmagic1
-RUN pip3 install -r requirement.txt
+RUN pip3 install -r req.txt
 COPY . /code/
 
 EXPOSE 8000

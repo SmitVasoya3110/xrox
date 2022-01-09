@@ -3,22 +3,22 @@ version: '2.2'
 services:
 
 
-  dbmysql:
+  db:
     image: mysql
     restart: always
     ports:  
       - "3306:3306"
     command: --default-authentication-plugin=mysql_native_password
     environment:
-      - MYSQL_DATABASE=Print
-      - MYSQL_ROOT_PASSWORD='Print1234'
-      - MYSQL_USER=smit
-      - MYSQL_PASSWORD=smit1234
+      - MYSQL_DATABASE=print
+      - MYSQL_ROOT_PASSWORD=print1234
+#      - MYSQL_USER=smit
+#      - MYSQL_PASSWORD=smit1234
     volumes:
       - ./db-scripts:/docker-entrypoint-initdb.d
       - ./mysql_db_data_container:/var/lib/mysql
-    networks:
-      - print
+#    networks:
+#      - print
 
   adminer:
     image: adminer
@@ -28,7 +28,9 @@ services:
       ADMINER_DEFAULT_SERVER: dbmysql
       ADMINER_DESIGN: pepa-linha
     links:
-      - dbmysql
+      - db
+    depends_on:
+      - db
 
   appl:
     # dockerfile: Dockerfile
@@ -40,9 +42,11 @@ services:
     ports:
       - "8000:8000"
     links:
-      - dbmysql
-    networks:
-      - print
+      - db
+    depends_on:
+      - db
+#    networks:
+#      - print
         
 networks:
   print:
