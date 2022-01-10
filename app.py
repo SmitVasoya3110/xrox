@@ -3,7 +3,7 @@ import os
 import subprocess
 import json
 import socket
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, decode_token
 import pymysql
 import datetime
 # from flask_jwt import current_identity
@@ -36,10 +36,10 @@ app.config['MAIL_USE_SSL'] = True
 app.config['ORDER_MAIL'] = "henishj94@gmail.com"
 mail = Mail(app)
 
-app.config['MYSQL_HOST'] = 'db'
+app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PORT'] = 3306
-app.config['MYSQL_PASSWORD'] = 'print1234'
+app.config['MYSQL_PASSWORD'] = 'root1234'
 app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
 
@@ -165,12 +165,10 @@ def CustomerLogin():
 def check_email(email):
     qry = "select Email_Id from customer_master where Email_Id = %s"
     # cur = mysql2.connection.cursor()
-    con = mysql.connect()
-    cursor = con.cursor()
-    cursor.execute(qry, (email,))
-    result = cursor.fetchone()
-    cursor.close()
-    con.close()
+    cur = mysql.connection.cursor()
+    cur.execute(qry, (email,))
+    result = cur.fetchone()
+    cur.close()
     if result:
         return 1
     else:
@@ -213,10 +211,9 @@ def register_user():  # add new Customer -- MYSQL table : Customer_Master
         resp.status_code = 200
         return resp
     except Exception as e:
-        cur.close()
-        mysql.connection.close()
+
         print(e)
-        return {[]}, 400
+        return {}, 400
 
 
 @app.route('/register', methods=['POST'])
@@ -442,5 +439,85 @@ def attach_mail():
     return jsonify({"message": "OK"})
 
 
+@app.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    @copy_current_request_context
+    def send_email(receiver,url):
+        msg = Message(sender=app.config['MAIL_USERNAME'], recipients=[receiver])
+        print(msg)
+        msg.body = str(url)
+        mail.send(msg)
+
+    # print("..",_doc_(request))
+
+    # url = request.host_url + 'Reset'
+    url="http://localhost:3000/Reset"
+    body = request.get_json()
+    Email_Id = body.get('Email_Id')
+    if not Email_Id:
+        return {"message":"Email_Id is requred"},400
+
+    sql = """
+     SELECT * FROM `Customer_Master` where Email_Id = '"""+str(Email_Id)+"""' and status='1'
+     """
+    cur = mysql.connection.cursor()
+    cur.execute(sql)
+    result = cur.fetchone()
+    cur.close()
+    if not result:
+        return {"message":"Invaild Email ID"},400
+    print("result",result)
+    print("headers",request.headers)
+
+    expires = datetime.timedelta(hours=1)
+    reset_token = create_access_token(str(result[3]), expires_delta=expires)
+    # return 0
+    url+="?reset_token="+str(reset_token)
+    print("url",url)
+    thread = threading.Thread(target=send_email, args=(Email_Id,url))
+    # thread.start()
+    return {"message": "email was send for reset password"}
+
+@app.route('/reset-password', methods=['POST'])
+def reset_password():
+    body = request.json
+    print("body",body)
+    if body == None:
+        return {"message":"Inavid JSON"},400
+    reset_token = body.get('reset_token')
+    Password = body.get('Password')
+    if not reset_token or not Password:
+        return {"message":"Plz Provide reset_token and password"},400
+
+    user_id = decode_token(reset_token)['sub']
+    print(user_id)
+    print("user_id",user_id)
+    if not user_id:
+        return {"message":"Invaid Reset Tokan"},400
+
+    if not check_email(user_id):
+        return {"message":"Invalid User"}
+    # sql = """
+    #  SELECT * FROM `Customer_Master` where id = '"""+str(user_id)+"""' and status='1'
+    #  """
+    # cur = mysql.connection.cursor()
+    # cur.execute(sql)
+    # result = cur.fetchone()
+    # cur.close()
+    # if not result:
+    #     return {"message":"Invaild User"},400
+
+    sql="""
+    update Customer_Master set Password='"""+str(Password)+"""'
+    where Email_Id='"""+str(user_id)+"""' and status='1'
+    """
+    cur = mysql.connection.cursor()
+    cur.execute(sql)
+    mysql.connection.commit()
+    # result = cursor.fetchone()
+    cur.close()
+    return {"message":"Password was reset"}
+
+
 if __name__ == "__main__":
-    app.run(host="52.66.245.159",port=8000, debug=True, threaded=True)
+    app.run(host="0.0.0.0",port=8000, debug=True, threaded=True)
