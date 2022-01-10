@@ -292,9 +292,9 @@ def upload_file():
 
             if file.mimetype == "image/jpeg" or file.mimetype == "image/png":
                 if 'Total Images' in num_dict.keys():
-                    num_dict['Total Images'] += 1
+                    num_dict['Total_Images'] += 1
                 else:
-                    num_dict['Total Images'] = 1
+                    num_dict['Total_Images'] = 1
                 total_pages += 1
 
             if filename.rsplit(".")[1] == "doc" or filename.rsplit(".")[1] == "docx":
@@ -315,15 +315,15 @@ def upload_file():
             success = True
         else:
             errors[file.filename] = 'File type is not allowed'
-    num_dict['Total Pages'] = total_pages
+    num_dict['Total_Pages'] = total_pages
     if size == "A4" and typ.lower() == 'color':
-        num_dict['Total cost $'] = round(A4_C(total_pages),2)
+        num_dict['Total_cost'] = round(A4_C(total_pages),2)
     if size == "A4" and typ.lower() == 'bw':
-        num_dict['Total cost $'] = round(A4_BC(total_pages), 2)
+        num_dict['Total_cost'] = round(A4_BC(total_pages), 2)
     if size == "A3" and typ.lower() == 'color':
-        num_dict['Total cost $'] = round(A3_C(total_pages), 2)
+        num_dict['Total_cost'] = round(A3_C(total_pages), 2)
     if size == "A3" and typ.lower() == 'bw':
-        num_dict['Total cost $'] = round(A3_BC(total_pages), 2)
+        num_dict['Total_cost'] = round(A3_BC(total_pages), 2)
 
     if success and errors:
         errors['message'] = 'File(s) successfully uploaded'
