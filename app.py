@@ -36,10 +36,10 @@ app.config['MAIL_USE_SSL'] = True
 app.config['ORDER_MAIL'] = "henishj94@gmail.com"
 mail = Mail(app)
 
-app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_HOST'] = 'db'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PORT'] = 3306
-app.config['MYSQL_PASSWORD'] = 'root1234'
+# app.config['MYSQL_PORT'] = 3306
+app.config['MYSQL_PASSWORD'] = 'print1234'
 app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
 
@@ -163,7 +163,7 @@ def CustomerLogin():
         return ({"error": "There was an error"})
 
 def check_email(email):
-    qry = "select Email_Id from customer_master where Email_Id = %s"
+    qry = "select Email_Id from Customer_Master where Email_Id = %s"
     # cur = mysql2.connection.cursor()
     cur = mysql.connection.cursor()
     cur.execute(qry, (email,))
@@ -507,9 +507,10 @@ def reset_password():
     # if not result:
     #     return {"message":"Invaild User"},400
 
+
     sql="""
     update Customer_Master set Password='"""+str(Password)+"""'
-    where Email_Id='"""+str(user_id)+"""' and status='1'
+    where Email_fId='"""+str(user_id)+"""' and status='1'
     """
     cur = mysql.connection.cursor()
     cur.execute(sql)
