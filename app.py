@@ -29,11 +29,11 @@ CORS(app)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
-app.config['MAIL_USERNAME'] = 'ssmmiitt007@gmail.com'
-app.config['MAIL_PASSWORD'] = 'SP@88665'
+app.config['MAIL_USERNAME'] = 'ssssmmmmiiiitttt@gmail.com'
+app.config['MAIL_PASSWORD'] = 'mqlgthtejpwtrocw'
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
-app.config['ORDER_MAIL'] = "henishj94@gmail.com"
+app.config['ORDER_MAIL'] = "ssmmiitt007@gmail.com"
 mail = Mail(app)
 
 app.config['MYSQL_HOST'] = 'db'
