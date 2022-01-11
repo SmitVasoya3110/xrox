@@ -400,8 +400,10 @@ def confirm_payment():
         print(files)
         for file in files:
             file = secure_filename(file)
+            print(file)
+            nme = os.path.join(app.config['UPLOAD_FOLDER'], file)
             print("Full Path.....=>",(os.path.join(app.config['UPLOAD_FOLDER'], file)))
-            buf = open(os.path.join(app.config['UPLOAD_FOLDER'], file), 'rb').read()
+            buf = open(nme, 'rb').read()
             print(magic.from_buffer(buf, mime=True))
             msg.attach(file, magic.from_buffer(buf, mime=True), buf)
         mail.send(msg)
