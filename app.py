@@ -399,7 +399,8 @@ def confirm_payment():
         msg.body = f"Order has been received with <order_id:{order_id}> from <{receiver}>"
         print(files)
         for file in files:
-            print((os.path.join(app.config['UPLOAD_FOLDER'], file)))
+            file = secure_filename(file)
+            print("Full Path.....=>",(os.path.join(app.config['UPLOAD_FOLDER'], file)))
             buf = open(os.path.join(app.config['UPLOAD_FOLDER'], file), 'rb').read()
             print(magic.from_buffer(buf, mime=True))
             msg.attach(file, magic.from_buffer(buf, mime=True), buf)
