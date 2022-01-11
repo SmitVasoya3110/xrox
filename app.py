@@ -142,8 +142,8 @@ def CustomerLogin():
 
             dic2 = {}
             dic3 = {}
-
-            dic1["access_token"] = create_access_token(identity=rows[3])
+            expires = datetime.timedelta(hours=2)
+            dic1["access_token"] = create_access_token(identity=rows[3], expires_delta=expires)
             # dic1["refresh_token"] = create_refresh_token(identity=i[3])
 
             dic2["role"] = "Customer"
