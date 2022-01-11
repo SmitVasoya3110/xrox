@@ -42,6 +42,13 @@ app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'print1234'
 app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 24
+
+
+@app.errorhandler(413)
+def too_large(e):
+    return {"message":"File/s is/are too large. limit is 24 MB","limit":"24 MB"}, 413
+
 
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
 
@@ -257,8 +264,8 @@ def register():
 
     return "Server is Up and running"
 
-# @jwt_required
 @app.route('/multiple-files-upload', methods=['POST'])
+@jwt_required()
 def upload_file():
     print("In Upload API")
     # check if the post request has the file part
@@ -342,8 +349,8 @@ def upload_file():
 
 job_msg = "Your job as an email posted"
 
-# @jwt_required
 @app.route('/place/order', methods=["POST"])
+@jwt_required()
 def place_order():
     try:
         json_data = request.json
@@ -383,7 +390,7 @@ send = """
 <h1>Your Order have been placed. following are the details
 """
 
-# @jwt_required
+@jwt_required()
 @app.route('/confirm/order', methods=["POST"])
 def confirm_payment():
     @copy_current_request_context
@@ -418,7 +425,7 @@ def confirm_payment():
         return {"message": "OK"}, 200
 
 
-# @jwt_required
+@jwt_required()
 @app.route('/uploads', methods=["POST"])
 def attach_mail():
     files_details = []
