@@ -486,7 +486,7 @@ def forgot_password():
     # return 0
     url+="?reset_token="+str(reset_token)
     print("url",url)
-    thread = threading.Thread(target=send_email, args=(Email_Id,url))
+    thread = threading.Thread(target=send_email, args=(Email_Id,url)).start()
     # thread.start()
     return {"message": "email was send for reset password"}
 
