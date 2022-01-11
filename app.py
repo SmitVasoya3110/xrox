@@ -150,7 +150,7 @@ def CustomerLogin():
             dic2["uuid"] = rows[0]
 
             dic3["displayName"] = rows[1]
-            dic3["email"] = rows[2]
+            dic3["email"] = rows[3]
             dic3["photoURL"] = ""
 
             dic2["data"] = dic3
@@ -406,6 +406,7 @@ def confirm_payment():
             buf = open(nme, 'rb').read()
             print(magic.from_buffer(buf, mime=True))
             msg.attach(file, magic.from_buffer(buf, mime=True), buf)
+        print(msg)
         mail.send(msg)
         msg = Message(job_msg, sender=app.config['MAIL_USERNAME'], recipients=[receiver])
         msg.body = send + f"\norder_id:{order_id} \n files:{files}"
