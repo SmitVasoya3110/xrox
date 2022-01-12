@@ -463,7 +463,7 @@ def forgot_password():
     # print("..",_doc_(request))
 
     # url = request.host_url + 'Reset'
-    url="http://localhost:3000/Reset"
+    url="http://localhost:3000/Reset/"
     body = request.get_json()
     Email_Id = body.get('Email_Id')
     if not Email_Id:
@@ -484,7 +484,7 @@ def forgot_password():
     expires = datetime.timedelta(hours=1)
     reset_token = create_access_token(str(result[3]), expires_delta=expires)
     # return 0
-    url+="?reset_token="+str(reset_token)
+    url+=str(reset_token)
     print("url",url)
     thread = threading.Thread(target=send_email, args=(Email_Id,url)).start()
     # thread.start()
