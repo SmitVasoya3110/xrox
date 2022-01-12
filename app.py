@@ -33,7 +33,7 @@ app.config['MAIL_USERNAME'] = 'ssssmmmmiiiitttt@gmail.com'
 app.config['MAIL_PASSWORD'] = 'mqlgthtejpwtrocw'
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
-app.config['ORDER_MAIL'] = "ssmmiitt007@gmail.com"
+app.config['ORDER_MAIL'] = "henishj94@gmail.com"
 mail = Mail(app)
 
 app.config['MYSQL_HOST'] = 'db'
@@ -395,7 +395,7 @@ def place_order():
 #     return {"Res": res}
 
 send = """
-<h1>Your Order have been placed. following are the details
+Your Order have been placed. following are the details
 """
 
 @jwt_required()
@@ -465,7 +465,7 @@ def forgot_password():
     def send_email(receiver,url):
         msg = Message(sender=app.config['MAIL_USERNAME'], recipients=[receiver])
         print(msg)
-        msg.body = str(url)
+        msg.body = "Following is the reset password link. It will be expired in 2 hours\n"+str(url)
         mail.send(msg)
 
     # print("..",_doc_(request))
