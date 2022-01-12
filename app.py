@@ -522,7 +522,7 @@ def reset_password():
 
     sql="""
     update Customer_Master set Password='"""+str(Password)+"""'
-    where Email_fId='"""+str(user_id)+"""' and status='1'
+    where Email_Id='"""+str(user_id)+"""' and status='1'
     """
     cur = mysql.connection.cursor()
     cur.execute(sql)
