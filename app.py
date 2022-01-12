@@ -44,11 +44,15 @@ app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 24
 
+MIME = ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'application/vnd.oasis.opendocument.text-master']
 
 @app.errorhandler(413)
 def too_large(e):
     return {"message":"File/s is/are too large. limit is 24 MB","limit":"24 MB"}, 413
 
+@app.errorhandler(500)
+def internal_error(e):
+    return {"error" : "There is Internal Server Error"}
 
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
 
@@ -308,7 +312,7 @@ def upload_file():
                     num_dict['Total_Images'] = 1
                 total_pages += 1
 
-            if filename.rsplit(".")[1] == "doc" or filename.rsplit(".")[1] == "docx":
+            if file.mimetype in MIME:
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 source = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 destination = app.config['UPLOAD_FOLDER']
