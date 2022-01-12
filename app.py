@@ -136,6 +136,10 @@ def CustomerLogin():
         rows = cur.fetchone()
         cur.close()
         print(rows)
+
+        if not rows:
+            return jsonify({"message": "Enter Valid Email_Id or Password"}), 401
+
         # mysql.connection.close()
         if (len(rows) > 0):
             dic1 = {}
@@ -163,7 +167,6 @@ def CustomerLogin():
 
             # return res
 
-        return jsonify({"message": "Enter Valid Email_Id or Password"}), 401
 
     except Exception as e:
         print(e)
@@ -298,7 +301,8 @@ def upload_file():
                     total_pages += num_pages
 
             if file.mimetype == "image/jpeg" or file.mimetype == "image/png" or file.mimetype == "image/jpg":
-                if 'Total Images' in num_dict.keys():
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename)))
+                if 'Total_Images' in num_dict.keys():
                     num_dict['Total_Images'] += 1
                 else:
                     num_dict['Total_Images'] = 1
