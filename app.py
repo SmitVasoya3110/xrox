@@ -297,7 +297,7 @@ def upload_file():
                     print("NUM DICT +++", num_dict)
                     total_pages += num_pages
 
-            if file.mimetype == "image/jpeg" or file.mimetype == "image/png":
+            if file.mimetype == "image/jpeg" or file.mimetype == "image/png" or file.mimetype == "image/jpg":
                 if 'Total Images' in num_dict.keys():
                     num_dict['Total_Images'] += 1
                 else:
