@@ -23,9 +23,10 @@ ip_address = socket.gethostbyname(hostname)
 print(ip_address)
 
 app = Flask(__name__)
+CORS(app)
+
 app.config['SECRET_KEY'] = 'smit-->p-->this__is~secret886651234'
 jwt = JWTManager(app)
-CORS(app)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
@@ -479,7 +480,7 @@ def forgot_password():
     # print("..",_doc_(request))
 
     # url = request.host_url + 'Reset'
-    url = "http://localhost:3000/Reset/"
+    url = "http://172.105.176.153:3000/Reset/"
     body = request.get_json()
     Email_Id = body.get('Email_Id')
     if not Email_Id:
