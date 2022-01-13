@@ -424,7 +424,8 @@ def confirm_payment():
         print(msg)
         mail.send(msg)
         msg = Message("Customer Receipt", sender=app.config['MAIL_USERNAME'], recipients=[receiver])
-        msg.body = f"\norder_id:{order_id} \n files:{files} \n Price:{amount} \n ABN:{ABN} \n Company:{COMPANY}"
+        main_ = "Details of the Order Placed:\n\n"
+        msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n ABN: {ABN} \n Company: {COMPANY}"
         mail.send(msg)
 
     json_data = request.json
