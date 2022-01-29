@@ -114,4 +114,5 @@ dmypy.json
 .pyre/
 
 db-scripts
-mysql_db_data_container
+mysql_db_data_container/*
+uploads/*

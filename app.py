@@ -37,10 +37,10 @@ app.config['MAIL_USE_SSL'] = True
 app.config['ORDER_MAIL'] = "henishj94@gmail.com"
 mail = Mail(app)
 
-app.config['MYSQL_HOST'] = 'db'
-app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_HOST'] = 'db' #db
+app.config['MYSQL_USER'] = 'root' #root
 # app.config['MYSQL_PORT'] = 3306
-app.config['MYSQL_PASSWORD'] = 'print1234'
+app.config['MYSQL_PASSWORD'] = 'print1234' #print1234
 app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 24
@@ -297,48 +297,49 @@ def upload_file():
     success = False
 
     num_dict = {'numbers': []}
+    if False in [allowed_file(file.filename) for file in files]:
+        return jsonify({"message": "check your file type", "allowed":list(ALLOWED_EXTENSIONS)}),422
     total_pages = 0
     for file in files:
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            print(file.mimetype)
 
-            if file.mimetype == "application/pdf":
-                npath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(npath)
-                with open(npath, 'rb') as fpath:
-                    read_pdf = pypdf.PdfFileReader(fpath)
-                    num_pages = read_pdf.getNumPages()
-                    num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
-                    print("NUM DICT +++", num_dict)
-                    total_pages += num_pages
+        filename = secure_filename(file.filename)
+        print(file.mimetype)
 
-            if file.mimetype == "image/jpeg" or file.mimetype == "image/png" or file.mimetype == "image/jpg":
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename)))
-                if 'Total_Images' in num_dict.keys():
-                    num_dict['Total_Images'] += 1
-                else:
-                    num_dict['Total_Images'] = 1
-                total_pages += 1
+        if file.mimetype == "application/pdf":
+            npath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(npath)
+            with open(npath, 'rb') as fpath:
+                read_pdf = pypdf.PdfFileReader(fpath)
+                num_pages = read_pdf.getNumPages()
+                num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
+                print("NUM DICT +++", num_dict)
+                total_pages += num_pages
 
-            if file.mimetype in MIME:
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                source = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                destination = app.config['UPLOAD_FOLDER']
-                output = subprocess.run(
-                    ["libreoffice", '--headless', '--convert-to', 'pdf', source, '--outdir', destination])
-                print(output)
-                new_dest = os.path.splitext(destination + f'/{filename}')[0] + ".pdf"
-                with open(new_dest, 'rb') as fpath:
-                    read_pdf = pypdf.PdfFileReader(fpath)
-                    num_pages = read_pdf.getNumPages()
-                    num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
-                    print(num_pages)
-                    total_pages += num_pages
-                print("On Going")
-            success = True
-        else:
-            errors[file.filename] = 'File type is not allowed'
+        if file.mimetype == "image/jpeg" or file.mimetype == "image/png" or file.mimetype == "image/jpg":
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename)))
+            if 'Total_Images' in num_dict.keys():
+                num_dict['Total_Images'] += 1
+            else:
+                num_dict['Total_Images'] = 1
+            total_pages += 1
+
+        if file.mimetype in MIME:
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            source = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            destination = app.config['UPLOAD_FOLDER']
+            output = subprocess.run(
+                ["libreoffice", '--headless', '--convert-to', 'pdf', source, '--outdir', destination])
+            print(output)
+            new_dest = os.path.splitext(destination + f'/{filename}')[0] + ".pdf"
+            with open(new_dest, 'rb') as fpath:
+                read_pdf = pypdf.PdfFileReader(fpath)
+                num_pages = read_pdf.getNumPages()
+                num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
+                print(num_pages)
+                total_pages += num_pages
+            print("On Going")
+    success = True
+
     num_dict['Total_Pages'] = total_pages
     if size == "A4" and typ.lower() == 'color':
         num_dict['Total_cost'] = round(A4_C(total_pages), 2)
@@ -349,11 +350,11 @@ def upload_file():
     if size == "A3" and typ.lower() == 'bw':
         num_dict['Total_cost'] = round(A3_BC(total_pages), 2)
 
-    if success and errors:
-        errors['message'] = 'File(s) successfully uploaded'
-        resp = jsonify({"errors": errors, "number": num_dict})
-        resp.status_code = 500
-        return resp
+    # if success and errors:
+    #     errors['message'] = 'File(s) successfully uploaded'
+    #     resp = jsonify({"errors": errors, "number": num_dict})
+    #     resp.status_code = 500
+    #     return resp
     if success:
         resp = jsonify({'message': 'Files successfully uploaded', "numbers": num_dict})
         resp.status_code = 201
@@ -547,6 +548,17 @@ def reset_password():
     # result = cursor.fetchone()
     cur.close()
     return {"message": "Password was reset"}
+
+
+
+@app.route('/refresh-token', methods=['POST', 'GET'])
+@jwt_required()
+def refresh_token():
+    # retrive the user's identity from the refresh token using a Flask-JWT-Extended built-in method
+    current_user = get_jwt_identity()
+    # return a non-fresh token for the user
+    new_token = create_access_token(identity=current_user)
+    return {'access_token': new_token}, 200
 
 
 if __name__ == "__main__":
