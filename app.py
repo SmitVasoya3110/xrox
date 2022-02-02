@@ -221,7 +221,7 @@ def register_user():  # add new Customer -- MYSQL table : Customer_Master
             return {"message": "Email is already in use"}
         status = 1
         sql = """INSERT INTO `Customer_Master` (`FirstName`, `LastName`, `Email_Id`, `Password`, `status`, `dateAdded`, `mobile`)
-                 VALUES (%s,%s,%s,%s,%s,%s, %s);"""
+                 VALUES (%s,%s,%s,%s,%s,%s,%s);"""
         data = (first_name, last_name, email, password, status, dt_string, mobile)
         print("SQL QUERY AND DATA ", sql, data)
         cur = mysql.connection.cursor()
@@ -283,86 +283,84 @@ def register_user():  # add new Customer -- MYSQL table : Customer_Master
 @app.route('/multiple-files-upload', methods=['POST'])
 @jwt_required()
 def upload_file():
-    print("In Upload API")
-    # check if the post request has the file part
-    size, typ = request.form['docFormat'].split('_')
-    if 'files[]' not in request.files:
-        resp = jsonify({'message': 'No file part in the request'})
-        resp.status_code = 400
-        return resp
+    try:
+        print("In Upload API")
+        # check if the post request has the file part
+        size, typ = request.form['docFormat'].split('_')
+        page_format = request.form['pageFormat']
+        if 'files[]' not in request.files:
+            resp = jsonify({'message': 'No file part in the request'})
+            resp.status_code = 400
+            return resp
 
-    files = request.files.getlist('files[]')
+        files = request.files.getlist('files[]')
 
-    errors = {}
-    success = False
+        num_dict = {'numbers': []}
+        if False in [allowed_file(file.filename) for file in files]:
+            return jsonify({"message": "check your file type", "allowed":list(ALLOWED_EXTENSIONS)}),422
+        total_pages = 0
+        for file in files:
 
-    num_dict = {'numbers': []}
-    if False in [allowed_file(file.filename) for file in files]:
-        return jsonify({"message": "check your file type", "allowed":list(ALLOWED_EXTENSIONS)}),422
-    total_pages = 0
-    for file in files:
+            filename = secure_filename(file.filename)
+            print(file.mimetype)
 
-        filename = secure_filename(file.filename)
-        print(file.mimetype)
+            if file.mimetype == "application/pdf":
+                npath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(npath)
+                with open(npath, 'rb') as fpath:
+                    read_pdf = pypdf.PdfFileReader(fpath)
+                    num_pages = read_pdf.getNumPages()
+                    num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
+                    print("NUM DICT +++", num_dict)
+                    total_pages += num_pages
 
-        if file.mimetype == "application/pdf":
-            npath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(npath)
-            with open(npath, 'rb') as fpath:
-                read_pdf = pypdf.PdfFileReader(fpath)
-                num_pages = read_pdf.getNumPages()
-                num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
-                print("NUM DICT +++", num_dict)
-                total_pages += num_pages
+            if file.mimetype == "image/jpeg" or file.mimetype == "image/png" or file.mimetype == "image/jpg":
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename)))
+                if 'Total_Images' in num_dict.keys():
+                    num_dict['Total_Images'] += 1
+                else:
+                    num_dict['Total_Images'] = 1
+                total_pages += 1
 
-        if file.mimetype == "image/jpeg" or file.mimetype == "image/png" or file.mimetype == "image/jpg":
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename)))
-            if 'Total_Images' in num_dict.keys():
-                num_dict['Total_Images'] += 1
-            else:
-                num_dict['Total_Images'] = 1
-            total_pages += 1
+            if file.mimetype in MIME:
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                source = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                destination = app.config['UPLOAD_FOLDER']
+                output = subprocess.run(
+                    ["libreoffice", '--headless', '--convert-to', 'pdf', source, '--outdir', destination])
+                print(output)
+                new_dest = os.path.splitext(destination + f'/{filename}')[0] + ".pdf"
+                with open(new_dest, 'rb') as fpath:
+                    read_pdf = pypdf.PdfFileReader(fpath)
+                    num_pages = read_pdf.getNumPages()
+                    num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
+                    print(num_pages)
+                    total_pages += num_pages
+                print("On Going")
+    
 
-        if file.mimetype in MIME:
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            source = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            destination = app.config['UPLOAD_FOLDER']
-            output = subprocess.run(
-                ["libreoffice", '--headless', '--convert-to', 'pdf', source, '--outdir', destination])
-            print(output)
-            new_dest = os.path.splitext(destination + f'/{filename}')[0] + ".pdf"
-            with open(new_dest, 'rb') as fpath:
-                read_pdf = pypdf.PdfFileReader(fpath)
-                num_pages = read_pdf.getNumPages()
-                num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
-                print(num_pages)
-                total_pages += num_pages
-            print("On Going")
-    success = True
+        num_dict['Total_Pages'] = total_pages
+        if size == "A4" and typ.lower() == 'color':
+            num_dict['Total_cost'] = round(A4_C(total_pages), 2)
+        if size == "A4" and typ.lower() == 'bw':
+            num_dict['Total_cost'] = round(A4_BC(total_pages), 2)
+        if size == "A3" and typ.lower() == 'color':
+            num_dict['Total_cost'] = round(A3_C(total_pages), 2)
+        if size == "A3" and typ.lower() == 'bw':
+            num_dict['Total_cost'] = round(A3_BC(total_pages), 2)
+        num_dict['page_format'] = page_format
+        # if success and errors:
+        #     errors['message'] = 'File(s) successfully uploaded'
+        #     resp = jsonify({"errors": errors, "number": num_dict})
+        #     resp.status_code = 500
+        #     return resp
 
-    num_dict['Total_Pages'] = total_pages
-    if size == "A4" and typ.lower() == 'color':
-        num_dict['Total_cost'] = round(A4_C(total_pages), 2)
-    if size == "A4" and typ.lower() == 'bw':
-        num_dict['Total_cost'] = round(A4_BC(total_pages), 2)
-    if size == "A3" and typ.lower() == 'color':
-        num_dict['Total_cost'] = round(A3_C(total_pages), 2)
-    if size == "A3" and typ.lower() == 'bw':
-        num_dict['Total_cost'] = round(A3_BC(total_pages), 2)
-
-    # if success and errors:
-    #     errors['message'] = 'File(s) successfully uploaded'
-    #     resp = jsonify({"errors": errors, "number": num_dict})
-    #     resp.status_code = 500
-    #     return resp
-    if success:
         resp = jsonify({'message': 'Files successfully uploaded', "numbers": num_dict})
         resp.status_code = 201
         return resp
-    else:
-        resp = jsonify(errors)
-        resp.status_code = 500
-        return resp
+    except Exception as e:
+        print(e)
+        return {"message": "There was an error"}, 500
 
 
 job_msg = "Your job as an email posted"
@@ -372,23 +370,34 @@ job_msg = "Your job as an email posted"
 @jwt_required()
 def place_order():
     try:
-        json_data = request.json
-        user_id = json_data.get('user_id', 0)
-        size, typ = json_data.get('type', ' _ ').split('_')
-        files = json_data.get('files', [])
-        amount = json_data.get('amount')
+        try:
+            json_data = request.json
+            user_id = json_data.get('user_id')
+            size, typ = json_data.get('type', ' _ ').split('_')
+            files = json_data.get('files', [])
+            amount = json_data.get('amount')
+            sides = json_data.get('pageFormat')
+        except Exception as e:
+            print(e)
+            return {"message": "Invalid data sent"}, 402
+
         print(type(json.dumps(files)))
         print("++" * 20, type(user_id), size, typ, type(files), amount)
-        qry = "insert into orders (user_id, size, type, files, amount) values (%s,%s,%s,%s,%s)"
-        values = (user_id, size, typ, json.dumps(files), amount)
-        cur = mysql.connection.cursor()
-        cur.execute(qry, values)
-        mysql.connection.commit()
-        last_id = cur.lastrowid
+        try:
+            qry = "insert into orders (user_id, size, type, sides, files, amount) values (%s,%s,%s,%s,%s,%s)"
+            values = (user_id, size, typ, sides,json.dumps(files), amount)
+            cur = mysql.connection.cursor()
+            cur.execute(qry, values)
+            mysql.connection.commit()
+            last_id = cur.lastrowid
+        except Exception as e:
+            print(e)
+            return {"message": "There is an error in Database"}, 500
+
         return jsonify({"message": "OK", "order_id": last_id, "amount": amount}), 200
 
     except Exception as e:
-        return {"message": "Internal Server Error"}
+        return {"message": "Internal Server Error"}, 500
 
 
 #
@@ -414,11 +423,13 @@ def confirm_payment():
     def send_attachment(order_id: int, files: list, amount:int,receiver: str):
         msg = Message('Order', sender=app.config['MAIL_USERNAME'], recipients=[app.config['ORDER_MAIL']])
         msg.body = f"Order has been received with <order_id:{order_id}> from <{receiver}>"
+        fpath = []
         print(files)
         for file in files:
             file = secure_filename(file)
             print(file)
             nme = os.path.join(app.config['UPLOAD_FOLDER'], file)
+            fpath.append(nme)
             print("Full Path.....=>", (os.path.join(app.config['UPLOAD_FOLDER'], file)))
             buf = open(nme, 'rb').read()
             print(magic.from_buffer(buf, mime=True))
@@ -429,6 +440,12 @@ def confirm_payment():
         main_ = "Details of the Order Placed:\n\n"
         msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n ABN: {ABN} \n Company: {COMPANY}"
         mail.send(msg)
+
+        for pth in fpath:
+            if os.path.isfile(fpath) and os.path.exists(pth):
+                os.remove(pth)
+                continue
+            continue
 
     json_data = request.json
     order_id = json_data.get('order_id', 0)
