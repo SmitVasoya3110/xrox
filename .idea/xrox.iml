@@ -3,6 +3,10 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/rox" />
+      <excludeFolder url="file://$MODULE_DIR$/mysql_db_data_container/mysql" />
+      <excludeFolder url="file://$MODULE_DIR$/mysql_db_data_container/performance_schema" />
+      <excludeFolder url="file://$MODULE_DIR$/mysql_db_data_container/sys" />
+      <excludeFolder url="file://$MODULE_DIR$/uploads" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -12,13 +12,11 @@ services:
     environment:
       - MYSQL_DATABASE=print
       - MYSQL_ROOT_PASSWORD=print1234
-#      - MYSQL_USER=smit
-#      - MYSQL_PASSWORD=smit1234
     volumes:
       - ./db-scripts:/docker-entrypoint-initdb.d
       - ./mysql_db_data_container:/var/lib/mysql
-#    networks:
-#      - print
+    networks:
+      - print
 
   adminer:
     image: adminer
@@ -27,10 +25,12 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: dbmysql
       ADMINER_DESIGN: pepa-linha
-    links:
-      - db
     depends_on:
       - db
+    links:
+      - db
+    networks:
+      - print
 
   appl:
     # dockerfile: Dockerfile
@@ -41,12 +41,12 @@ services:
       - PORT=8000
     ports:
       - "8000:8000"
-    links:
-      - db
     depends_on:
       - db
-#    networks:
-#      - print
+    links:
+      - db
+    networks:
+      - print
         
 networks:
   print:
