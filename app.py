@@ -361,7 +361,7 @@ def upload_file():
     except Exception as e:
         print(e)
         return {"message": "There was an error"}, 500
-
+ 
 
 job_msg = "Your job as an email posted"
 
@@ -420,7 +420,7 @@ def place_order():
 @app.route('/confirm/order', methods=["POST"])
 def confirm_payment():
     @copy_current_request_context
-    def send_attachment(order_id: int, files: list, amount:int,receiver: str):
+    def send_attachment(order_id: int, files: list, psize:str, side:str, amount:int,receiver: str):
         msg = Message('Order', sender=app.config['MAIL_USERNAME'], recipients=[app.config['ORDER_MAIL']])
         msg.body = f"Order has been received with <order_id:{order_id}> from <{receiver}>"
         fpath = []
@@ -438,7 +438,7 @@ def confirm_payment():
         mail.send(msg)
         msg = Message("Customer Receipt", sender=app.config['MAIL_USERNAME'], recipients=[receiver])
         main_ = "Details of the Order Placed:\n\n"
-        msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n ABN: {ABN} \n Company: {COMPANY}"
+        msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n Sides: {side} \n ABN: {ABN} \n Company: {COMPANY}"
         mail.send(msg)
 
         for pth in fpath:
@@ -453,14 +453,15 @@ def confirm_payment():
     files = json_data.get('fileNames', [])
     amount = json_data.get('Total_Cost', 0)
     email = json_data.get('email', '')
-    size, typ = json_data.get('docFormat', ' _ ').split('_')
+    psize, typ = json_data.get('docFormat', ' _ ').split('_')
+    sides = json_data.get('pageaFormat')
     typ = "color" if typ.lower() == "c" else "black & white"
     if order_id and files and amount and email:
         qry = "insert into payments (order_id, user_id,amount, is_successful) values (%s, %s, %s, %s)"
         cur = mysql.connection.cursor()
         cur.execute(qry, (order_id, user_id, amount, 1))
         mysql.connection.commit()
-        threading.Thread(target=send_attachment, args=(order_id, files, amount,email)).start()
+        threading.Thread(target=send_attachment, args=(order_id, files, psize, sides, amount,email)).start()
         return {"message": "OK"}, 200
 
 
