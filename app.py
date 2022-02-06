@@ -613,7 +613,7 @@ def pay():
 def webhook():
     try:
         @copy_current_request_context
-        def send_attachment(order_id: int, files: list, psize: str, side: str, amount: int, receiver: str):
+        def send_attachment(order_id: int, files: list, psize: str, side: str, amount: float, receiver: str):
             msg = Message('Order', sender=app.config['MAIL_USERNAME'], recipients=[app.config['ORDER_MAIL']])
             msg.body = f"Order has been received with <order_id:{order_id}> from <{receiver}>"
             fpath = []
@@ -631,7 +631,7 @@ def webhook():
             mail.send(msg)
             msg = Message("Customer Receipt", sender=app.config['MAIL_USERNAME'], recipients=[receiver])
             main_ = "Details of the Order Placed:\n\n"
-            msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n Sides: {side} \n ABN: {ABN} \n Company: {COMPANY}"
+            msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n type: {psize} \n Sides: {side} \n ABN: {ABN} \n Company: {COMPANY}"
             mail.send(msg)
 
             for pth in fpath:
