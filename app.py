@@ -650,7 +650,7 @@ def webhook():
         sig_header = request.headers.get('Stripe_Signature', None)
         files = json.loads(metadata['files'])
         user_id = int(metadata['user_id'])
-        amount = int(metadata['amount'])
+        amount = float(metadata['amount'])
 
         # if not sig_header:
         #     return 'No Signature Header!', 400
