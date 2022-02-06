@@ -594,7 +594,7 @@ def pay():
         return 'You need to send an Email!', 400
 
     intent = stripe.PaymentIntent.create(
-        amount=amount*100,
+        amount=int(amount*100),
         currency='usd',
         receipt_email=email,
         metadata={
