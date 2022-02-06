@@ -614,7 +614,7 @@ def webhook():
     payload = request.get_json()
 
     print(payload)
-    print("METADATA", payload['metadata'])
+    print("METADATA", payload['data']['object']['charges']['data'][0]['metadata'])
     sig_header = request.headers.get('Stripe_Signature', None)
 
     if not sig_header:
