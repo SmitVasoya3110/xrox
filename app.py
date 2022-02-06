@@ -626,16 +626,16 @@ def webhook():
         # if not sig_header:
         #     return 'No Signature Header!', 400
 
-        try:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, endpoint_secret
-            )
-        except ValueError as e:
-            # Invalid payload
-            return 'Invalid payload', 400
-        except stripe.error.SignatureVerificationError as e:
-            # Invalid signature
-            return 'Invalid signature', 400
+        # try:
+        #     event = stripe.Webhook.construct_event(
+        #         payload, sig_header, endpoint_secret
+        #     )
+        # except ValueError as e:
+        #     # Invalid payload
+        #     return 'Invalid payload', 400
+        # except stripe.error.SignatureVerificationError as e:
+        #     # Invalid signature
+        #     return 'Invalid signature', 400
 
         if payload['type'] == 'payment_intent.succeeded':
             print("In payload Part")
