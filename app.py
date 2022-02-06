@@ -4,7 +4,6 @@ import subprocess
 import json
 import socket
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, decode_token
-import pymysql
 import datetime
 # from flask_jwt import current_identity
 from flask_cors import CORS
@@ -13,6 +12,7 @@ from flask_mysqldb import MySQL
 import PyPDF2 as pypdf
 from flask_mail import Mail, Message
 import threading
+import stripe
 
 from flask import Flask, request, redirect, jsonify, copy_current_request_context
 from werkzeug.utils import secure_filename
@@ -22,8 +22,11 @@ hostname = socket.gethostname()
 ip_address = socket.gethostbyname(hostname)
 print(ip_address)
 
+stripe.api_key = 'pk_test_51KNpBmDiddQAhMW0Lzmb8Gbd8oIVJtbBQxqf73mYItt5rSbxhMeZ3X36qXQAZGxPlfX9QvnO9OJASoJyXy4tCHxq00dNLc3nH0'
+endpoint_secret = 'sk_test_51KNpBmDiddQAhMW0bxLCLiUvtVWYguCrcucBj9bJmdPc9X85uGqMWD098FAyDaLqDjeG1iCVGWLuiP1a2qqB8Hm300FR6q18Dv'
 app = Flask(__name__)
 CORS(app)
+
 
 app.config['SECRET_KEY'] = 'smit-->p-->this__is~secret886651234'
 jwt = JWTManager(app)
@@ -37,10 +40,10 @@ app.config['MAIL_USE_SSL'] = True
 app.config['ORDER_MAIL'] = "henishj94@gmail.com"
 mail = Mail(app)
 
-app.config['MYSQL_HOST'] = 'db' #db
-app.config['MYSQL_USER'] = 'root' #root
+app.config['MYSQL_HOST'] = 'db'  # db
+app.config['MYSQL_USER'] = 'root'  # root
 # app.config['MYSQL_PORT'] = 3306
-app.config['MYSQL_PASSWORD'] = 'print1234' #print1234
+app.config['MYSQL_PASSWORD'] = 'print1234'  # print1234
 app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 24
@@ -297,7 +300,7 @@ def upload_file():
 
         num_dict = {'numbers': []}
         if False in [allowed_file(file.filename) for file in files]:
-            return jsonify({"message": "check your file type", "allowed":list(ALLOWED_EXTENSIONS)}),422
+            return jsonify({"message": "check your file type", "allowed": list(ALLOWED_EXTENSIONS)}), 422
         total_pages = 0
         for file in files:
 
@@ -337,7 +340,6 @@ def upload_file():
                     print(num_pages)
                     total_pages += num_pages
                 print("On Going")
-    
 
         num_dict['Total_Pages'] = total_pages
         if size == "A4" and typ.lower() == 'color':
@@ -361,7 +363,7 @@ def upload_file():
     except Exception as e:
         print(e)
         return {"message": "There was an error"}, 500
- 
+
 
 job_msg = "Your job as an email posted"
 
@@ -385,7 +387,7 @@ def place_order():
         print("++" * 20, type(user_id), size, typ, type(files), amount)
         try:
             qry = "insert into orders (user_id, size, type, sides, files, amount) values (%s,%s,%s,%s,%s,%s)"
-            values = (user_id, size, typ, sides,json.dumps(files), amount)
+            values = (user_id, size, typ, sides, json.dumps(files), amount)
             cur = mysql.connection.cursor()
             cur.execute(qry, values)
             mysql.connection.commit()
@@ -420,7 +422,7 @@ def place_order():
 @app.route('/confirm/order', methods=["POST"])
 def confirm_payment():
     @copy_current_request_context
-    def send_attachment(order_id: int, files: list, psize:str, side:str, amount:int,receiver: str):
+    def send_attachment(order_id: int, files: list, psize: str, side: str, amount: int, receiver: str):
         msg = Message('Order', sender=app.config['MAIL_USERNAME'], recipients=[app.config['ORDER_MAIL']])
         msg.body = f"Order has been received with <order_id:{order_id}> from <{receiver}>"
         fpath = []
@@ -461,7 +463,7 @@ def confirm_payment():
         cur = mysql.connection.cursor()
         cur.execute(qry, (order_id, user_id, amount, 1))
         mysql.connection.commit()
-        threading.Thread(target=send_attachment, args=(order_id, files, psize, sides, amount,email)).start()
+        threading.Thread(target=send_attachment, args=(order_id, files, psize, sides, amount, email)).start()
         return {"message": "OK"}, 200
 
 
@@ -568,7 +570,6 @@ def reset_password():
     return {"message": "Password was reset"}
 
 
-
 @app.route('/refresh-token', methods=['POST', 'GET'])
 @jwt_required()
 def refresh_token():
@@ -577,6 +578,35 @@ def refresh_token():
     # return a non-fresh token for the user
     new_token = create_access_token(identity=current_user)
     return {'access_token': new_token}, 200
+
+
+@app.route('/pay', methods=['POST'])
+def pay():
+    jsdata = request.get_json()
+    print("THIS IS JSON DATA", jsdata)
+    email = jsdata.get('email')
+    amount = jsdata.get('amount')
+    user_id = jsdata.get('user_id')
+    files = jsdata.get('files')
+    order_id = jsdata.get('order_id')
+
+    if not email:
+        return 'You need to send an Email!', 400
+
+    intent = stripe.PaymentIntent.create(
+        amount=amount,
+        currency='usd',
+        receipt_email=email,
+        metadata={
+            'order_id': order_id,
+            'files': files,
+            'user_id': user_id,
+            'email': email,
+            'amount': amount
+        }
+    )
+
+    return {"client_secret": intent['client_secret']}, 200
 
 
 if __name__ == "__main__":
