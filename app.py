@@ -22,7 +22,7 @@ hostname = socket.gethostname()
 ip_address = socket.gethostbyname(hostname)
 print(ip_address)
 
-stripe.api_key = 'sk_test_51KQ873SCn4KbXzcOqCAEO2QHty89SWGddzDXI1kq7TCUMYL5Pj2PDT7tIJNRyATSz1iX7CKK3NCrDKhJUY3ZkFtC00Z67OhpP4'
+stripe.api_key = 'sk_test_51KNpBmDiddQAhMW0bxLCLiUvtVWYguCrcucBj9bJmdPc9X85uGqMWD098FAyDaLqDjeG1iCVGWLuiP1a2qqB8Hm300FR6q18Dv'
 endpoint_secret = ''
 app = Flask(__name__)
 CORS(app)
