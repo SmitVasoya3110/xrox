@@ -623,8 +623,8 @@ def webhook():
         user_id = int(metadata['user_id'])
         amount = int(metadata['amount'])
 
-        if not sig_header:
-            return 'No Signature Header!', 400
+        # if not sig_header:
+        #     return 'No Signature Header!', 400
 
         try:
             event = stripe.Webhook.construct_event(
