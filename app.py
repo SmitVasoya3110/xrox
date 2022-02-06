@@ -611,8 +611,10 @@ def pay():
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    payload = request.get_data()
+    payload = request.get_json()
+
     print(payload)
+    print("METADATA", payload['metadata'])
     sig_header = request.headers.get('Stripe_Signature', None)
 
     if not sig_header:
@@ -642,7 +644,7 @@ def webhook():
 
 @app.route('/user', methods=['GET'])
 def user():
-    return OK, 200
+    return "OK", 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True, threaded=True)
