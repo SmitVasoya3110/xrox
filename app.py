@@ -639,7 +639,7 @@ def webhook():
 
         if payload['type'] == 'payment_intent.succeeded':
             print("In payload Part")
-            email = event['data']['object'][
+            email = payload['data']['object'][
                 'receipt_email']  # contains the email that will recive the recipt for the payment (users email usually)
             sqlq = "INSERT INTO payments (user_id,order_id,amount, charged_id, is_successful) VALUES (%s,%s,%s,%s,%s)"
             insert_data = (user_id, order_id, amount, charge_id, 1)
