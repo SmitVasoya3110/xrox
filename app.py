@@ -614,8 +614,13 @@ def webhook():
     payload = request.get_json()
 
     print(payload)
-    print("METADATA", payload['data']['object']['charges']['data'][0]['metadata'])
+    metadata = payload['data']['object']['charges']['data'][0]['metadata']
+    order_id = int(metadata['order_id'])
+    charge_id = payload['data']['object']['charges']['data'][0]['id']
     sig_header = request.headers.get('Stripe_Signature', None)
+    files = json.loads(metadata['files'])
+    user_id = int(metadata['user_id'])
+    amount = int(metadata['amount'])
 
     if not sig_header:
         return 'No Signature Header!', 400
@@ -634,7 +639,17 @@ def webhook():
     if event['type'] == 'payment_intent.succeeded':
         email = event['data']['object'][
             'receipt_email']  # contains the email that will recive the recipt for the payment (users email usually)
+        sqlq = "INSERT INTO payments (user_id,order_id,amount, charged_id, is_successful) VALUES (%s,%s,%s,%s,%s)"
+        insert_data = (user_id, order_id, amount, charge_id, 1)
+        cur = mysql.connection.cursor()
+        cur.execute(sqlq, insert_data)
+        mysql.connection.commit()
 
+        ftch = "SELECT sides from orders WHERE order_id = %s"
+        cur.execute(ftch, (order_id,))
+        result = cur.fetchone()
+        cur.close()
+        print(result)
         return {"message":"OK"},200
     else:
         return 'Unexpected event type', 400
