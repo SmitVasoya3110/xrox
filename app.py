@@ -638,6 +638,7 @@ def webhook():
             return 'Invalid signature', 400
 
         if payload['type'] == 'payment_intent.succeeded':
+            print("In payload Part")
             email = event['data']['object'][
                 'receipt_email']  # contains the email that will recive the recipt for the payment (users email usually)
             sqlq = "INSERT INTO payments (user_id,order_id,amount, charged_id, is_successful) VALUES (%s,%s,%s,%s,%s)"
@@ -653,7 +654,7 @@ def webhook():
             print(result)
             return {"message":"OK"},200
         else:
-
+            print("In Else Part")
             return 'Unexpected event type', 400
     except Exception as e:
         print(e)
