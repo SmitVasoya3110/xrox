@@ -611,50 +611,53 @@ def pay():
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    payload = request.get_json()
-
-    print(payload)
-    metadata = payload['data']['object']['charges']['data'][0]['metadata']
-    order_id = int(metadata['order_id'])
-    charge_id = payload['data']['object']['charges']['data'][0]['id']
-    sig_header = request.headers.get('Stripe_Signature', None)
-    files = json.loads(metadata['files'])
-    user_id = int(metadata['user_id'])
-    amount = int(metadata['amount'])
-
-    if not sig_header:
-        return 'No Signature Header!', 400
-
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, endpoint_secret
-        )
-    except ValueError as e:
-        # Invalid payload
-        return 'Invalid payload', 400
-    except stripe.error.SignatureVerificationError as e:
-        # Invalid signature
-        return 'Invalid signature', 400
+        payload = request.get_json()
 
-    if event['type'] == 'payment_intent.succeeded':
-        email = event['data']['object'][
-            'receipt_email']  # contains the email that will recive the recipt for the payment (users email usually)
-        sqlq = "INSERT INTO payments (user_id,order_id,amount, charged_id, is_successful) VALUES (%s,%s,%s,%s,%s)"
-        insert_data = (user_id, order_id, amount, charge_id, 1)
-        cur = mysql.connection.cursor()
-        cur.execute(sqlq, insert_data)
-        mysql.connection.commit()
+        print(payload)
+        metadata = payload['data']['object']['charges']['data'][0]['metadata']
+        order_id = int(metadata['order_id'])
+        charge_id = payload['data']['object']['charges']['data'][0]['id']
+        sig_header = request.headers.get('Stripe_Signature', None)
+        files = json.loads(metadata['files'])
+        user_id = int(metadata['user_id'])
+        amount = int(metadata['amount'])
 
-        ftch = "SELECT sides from orders WHERE order_id = %s"
-        cur.execute(ftch, (order_id,))
-        result = cur.fetchone()
-        cur.close()
-        print(result)
-        return {"message":"OK"},200
-    else:
-        return 'Unexpected event type', 400
+        if not sig_header:
+            return 'No Signature Header!', 400
 
-    return '', 200
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, endpoint_secret
+            )
+        except ValueError as e:
+            # Invalid payload
+            return 'Invalid payload', 400
+        except stripe.error.SignatureVerificationError as e:
+            # Invalid signature
+            return 'Invalid signature', 400
+
+        if payload['type'] == 'payment_intent.succeeded':
+            email = event['data']['object'][
+                'receipt_email']  # contains the email that will recive the recipt for the payment (users email usually)
+            sqlq = "INSERT INTO payments (user_id,order_id,amount, charged_id, is_successful) VALUES (%s,%s,%s,%s,%s)"
+            insert_data = (user_id, order_id, amount, charge_id, 1)
+            cur = mysql.connection.cursor()
+            cur.execute(sqlq, insert_data)
+            mysql.connection.commit()
+
+            ftch = "SELECT sides from orders WHERE order_id = %s"
+            cur.execute(ftch, (order_id,))
+            result = cur.fetchone()
+            cur.close()
+            print(result)
+            return {"message":"OK"},200
+        else:
+
+            return 'Unexpected event type', 400
+    except Exception as e:
+        print(e)
+        return '', 200
 
 
 @app.route('/user', methods=['GET'])
