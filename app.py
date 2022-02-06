@@ -612,6 +612,35 @@ def pay():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     try:
+        @copy_current_request_context
+        def send_attachment(order_id: int, files: list, psize: str, side: str, amount: int, receiver: str):
+            msg = Message('Order', sender=app.config['MAIL_USERNAME'], recipients=[app.config['ORDER_MAIL']])
+            msg.body = f"Order has been received with <order_id:{order_id}> from <{receiver}>"
+            fpath = []
+            print(files)
+            for file in files:
+                file = secure_filename(file)
+                print(file)
+                nme = os.path.join(app.config['UPLOAD_FOLDER'], file)
+                fpath.append(nme)
+                print("Full Path.....=>", (os.path.join(app.config['UPLOAD_FOLDER'], file)))
+                buf = open(nme, 'rb').read()
+                print(magic.from_buffer(buf, mime=True))
+                msg.attach(file, magic.from_buffer(buf, mime=True), buf)
+            print(msg)
+            mail.send(msg)
+            msg = Message("Customer Receipt", sender=app.config['MAIL_USERNAME'], recipients=[receiver])
+            main_ = "Details of the Order Placed:\n\n"
+            msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n Sides: {side} \n ABN: {ABN} \n Company: {COMPANY}"
+            mail.send(msg)
+
+            for pth in fpath:
+                if os.path.isfile(pth) and os.path.exists(pth):
+                    os.remove(pth)
+                    continue
+                continue
+
+
         payload = request.get_json()
 
         print(payload)
@@ -647,11 +676,14 @@ def webhook():
             cur.execute(sqlq, insert_data)
             mysql.connection.commit()
 
-            ftch = "SELECT sides from orders WHERE order_id = %s"
+            ftch = "SELECT sides, size, type from orders WHERE order_id = %s"
             cur.execute(ftch, (order_id,))
-            result = cur.fetchone()
+            res = cur.fetchone()
             cur.close()
-            print(result)
+            sides = res[0]
+            psize = res[1]+"_"+res[2]
+            threading.Thread(target=send_attachment, args=(order_id, files, psize, sides, amount, email)).start()
+
             return {"message":"OK"},200
         else:
             print("In Else Part")
