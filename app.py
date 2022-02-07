@@ -595,7 +595,7 @@ def pay():
 
     intent = stripe.PaymentIntent.create(
         amount=int(amount*100),
-        currency='usd',
+        currency='aud',
         receipt_email=email,
         metadata={
             'order_id': order_id,
