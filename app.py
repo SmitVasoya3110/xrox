@@ -37,7 +37,7 @@ app.config['MAIL_USERNAME'] = 'ssssmmmmiiiitttt@gmail.com'
 app.config['MAIL_PASSWORD'] = 'mqlgthtejpwtrocw'
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
-app.config['ORDER_MAIL'] = "henishj94@gmail.com"
+app.config['ORDER_MAIL'] = "websdaily@gmail.com"
 mail = Mail(app)
 
 app.config['MYSQL_HOST'] = 'db'  # db
