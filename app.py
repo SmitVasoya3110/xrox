@@ -64,6 +64,10 @@ def internal_error(e):
     return {"error": "There is Internal Server Error"}
 
 
+@app.errorhandler(401)
+def unauthorized(e):
+    return {"error":"Unauthorized attempt...Please login again and try"}
+
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
 
 
@@ -627,12 +631,14 @@ def webhook():
                 buf = open(nme, 'rb').read()
                 print(magic.from_buffer(buf, mime=True))
                 msg.attach(file, magic.from_buffer(buf, mime=True), buf)
-            print(msg)
+            print("Sending Mail")
             mail.send(msg)
+            print("successful sending")
             msg = Message("Customer Receipt", sender=app.config['MAIL_USERNAME'], recipients=[receiver])
             main_ = "Details of the Order Placed:\n\n"
             msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n type: {psize} \n Sides: {side} \n ABN: {ABN} \n Company: {COMPANY}"
             mail.send(msg)
+            print("to the client")
 
             for pth in fpath:
                 if os.path.isfile(pth) and os.path.exists(pth):
