@@ -448,7 +448,7 @@ def confirm_payment():
         mail.send(msg)
 
         for pth in fpath:
-            if os.path.isfile(fpath) and os.path.exists(pth):
+            if os.path.isfile(pth) and os.path.exists(pth):
                 os.remove(pth)
                 continue
             continue
@@ -505,7 +505,7 @@ def forgot_password():
     # print("..",_doc_(request))
 
     # url = request.host_url + 'Reset'
-    url = "http://172.105.176.153:3000/Reset/"
+    url = "https://printing7.com/Reset/"
     body = request.get_json()
     Email_Id = body.get('Email_Id')
     if not Email_Id:
