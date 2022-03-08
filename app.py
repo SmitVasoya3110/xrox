@@ -4,7 +4,6 @@ import subprocess
 import json
 import socket
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, decode_token
-import pymysql
 import datetime
 # from flask_jwt import current_identity
 from flask_cors import CORS
@@ -13,6 +12,7 @@ from flask_mysqldb import MySQL
 import PyPDF2 as pypdf
 from flask_mail import Mail, Message
 import threading
+import stripe
 
 from flask import Flask, request, redirect, jsonify, copy_current_request_context
 from werkzeug.utils import secure_filename
@@ -22,8 +22,11 @@ hostname = socket.gethostname()
 ip_address = socket.gethostbyname(hostname)
 print(ip_address)
 
+stripe.api_key = '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'
+endpoint_secret = ''
 app = Flask(__name__)
 CORS(app)
+
 
 app.config['SECRET_KEY'] = 'smit-->p-->this__is~secret886651234'
 jwt = JWTManager(app)
@@ -34,13 +37,13 @@ app.config['MAIL_USERNAME'] = 'ssssmmmmiiiitttt@gmail.com'
 app.config['MAIL_PASSWORD'] = 'mqlgthtejpwtrocw'
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
-app.config['ORDER_MAIL'] = "henishj94@gmail.com"
+app.config['ORDER_MAIL'] = "websdaily@gmail.com"
 mail = Mail(app)
 
-app.config['MYSQL_HOST'] = 'db' #db
-app.config['MYSQL_USER'] = 'root' #root
+app.config['MYSQL_HOST'] = 'db'  # db
+app.config['MYSQL_USER'] = 'root'  # root
 # app.config['MYSQL_PORT'] = 3306
-app.config['MYSQL_PASSWORD'] = 'print1234' #print1234
+app.config['MYSQL_PASSWORD'] = 'print1234'  # print1234
 app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 24
@@ -60,6 +63,10 @@ def too_large(e):
 def internal_error(e):
     return {"error": "There is Internal Server Error"}
 
+
+@app.errorhandler(401)
+def unauthorized(e):
+    return {"error":"Unauthorized attempt...Please login again and try"}
 
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
 
@@ -297,7 +304,7 @@ def upload_file():
 
         num_dict = {'numbers': []}
         if False in [allowed_file(file.filename) for file in files]:
-            return jsonify({"message": "check your file type", "allowed":list(ALLOWED_EXTENSIONS)}),422
+            return jsonify({"message": "check your file type", "allowed": list(ALLOWED_EXTENSIONS)}), 422
         total_pages = 0
         for file in files:
 
@@ -337,7 +344,6 @@ def upload_file():
                     print(num_pages)
                     total_pages += num_pages
                 print("On Going")
-    
 
         num_dict['Total_Pages'] = total_pages
         if size == "A4" and typ.lower() == 'color':
@@ -385,7 +391,7 @@ def place_order():
         print("++" * 20, type(user_id), size, typ, type(files), amount)
         try:
             qry = "insert into orders (user_id, size, type, sides, files, amount) values (%s,%s,%s,%s,%s,%s)"
-            values = (user_id, size, typ, sides,json.dumps(files), amount)
+            values = (user_id, size, typ, sides, json.dumps(files), amount)
             cur = mysql.connection.cursor()
             cur.execute(qry, values)
             mysql.connection.commit()
@@ -420,7 +426,7 @@ def place_order():
 @app.route('/confirm/order', methods=["POST"])
 def confirm_payment():
     @copy_current_request_context
-    def send_attachment(order_id: int, files: list, amount:int,receiver: str):
+    def send_attachment(order_id: int, files: list, psize: str, side: str, amount: int, receiver: str):
         msg = Message('Order', sender=app.config['MAIL_USERNAME'], recipients=[app.config['ORDER_MAIL']])
         msg.body = f"Order has been received with <order_id:{order_id}> from <{receiver}>"
         fpath = []
@@ -438,11 +444,11 @@ def confirm_payment():
         mail.send(msg)
         msg = Message("Customer Receipt", sender=app.config['MAIL_USERNAME'], recipients=[receiver])
         main_ = "Details of the Order Placed:\n\n"
-        msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n ABN: {ABN} \n Company: {COMPANY}"
+        msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n Sides: {side} \n ABN: {ABN} \n Company: {COMPANY}"
         mail.send(msg)
 
         for pth in fpath:
-            if os.path.isfile(fpath) and os.path.exists(pth):
+            if os.path.isfile(pth) and os.path.exists(pth):
                 os.remove(pth)
                 continue
             continue
@@ -453,14 +459,15 @@ def confirm_payment():
     files = json_data.get('fileNames', [])
     amount = json_data.get('Total_Cost', 0)
     email = json_data.get('email', '')
-    size, typ = json_data.get('docFormat', ' _ ').split('_')
+    psize, typ = json_data.get('docFormat', ' _ ').split('_')
+    sides = json_data.get('pageaFormat')
     typ = "color" if typ.lower() == "c" else "black & white"
     if order_id and files and amount and email:
         qry = "insert into payments (order_id, user_id,amount, is_successful) values (%s, %s, %s, %s)"
         cur = mysql.connection.cursor()
         cur.execute(qry, (order_id, user_id, amount, 1))
         mysql.connection.commit()
-        threading.Thread(target=send_attachment, args=(order_id, files, amount,email)).start()
+        threading.Thread(target=send_attachment, args=(order_id, files, psize, sides, amount, email)).start()
         return {"message": "OK"}, 200
 
 
@@ -498,7 +505,7 @@ def forgot_password():
     # print("..",_doc_(request))
 
     # url = request.host_url + 'Reset'
-    url = "http://172.105.176.153:3000/Reset/"
+    url = "https://printing7.com/Reset/"
     body = request.get_json()
     Email_Id = body.get('Email_Id')
     if not Email_Id:
@@ -567,7 +574,6 @@ def reset_password():
     return {"message": "Password was reset"}
 
 
-
 @app.route('/refresh-token', methods=['POST', 'GET'])
 @jwt_required()
 def refresh_token():
@@ -578,5 +584,219 @@ def refresh_token():
     return {'access_token': new_token}, 200
 
 
+@app.route('/pay', methods=['POST'])
+def pay():
+    jsdata = request.get_json()
+    print("THIS IS JSON DATA", jsdata)
+    email = jsdata.get('email')
+    amount = jsdata.get('amount')
+    user_id = jsdata.get('user_id')
+    files = jsdata.get('files')
+    order_id = jsdata.get('order_id')
+
+    if not email:
+        return 'You need to send an Email!', 400
+
+    intent = stripe.PaymentIntent.create(
+        amount=int(amount*100),
+        currency='aud',
+        receipt_email=email,
+        metadata={
+            'order_id': order_id,
+            'files': json.dumps(files),
+            'user_id': user_id,
+            'email': email,
+            'amount': amount
+        }
+    )
+
+    return {"client_secret": intent['client_secret']}, 200
+
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    try:
+        @copy_current_request_context
+        def send_attachment(order_id: int, files: list, psize: str, side: str, amount: float, receiver: str):
+            msg = Message('Order', sender=app.config['MAIL_USERNAME'], recipients=[app.config['ORDER_MAIL']])
+            msg.body = f"Order has been received with <order_id:{order_id}> from <{receiver}>"
+            fpath = []
+            print(files)
+            for file in files:
+                file = secure_filename(file)
+                print(file)
+                nme = os.path.join(app.config['UPLOAD_FOLDER'], file)
+                fpath.append(nme)
+                print("Full Path.....=>", (os.path.join(app.config['UPLOAD_FOLDER'], file)))
+                buf = open(nme, 'rb').read()
+                print(magic.from_buffer(buf, mime=True))
+                msg.attach(file, magic.from_buffer(buf, mime=True), buf)
+            print("Sending Mail")
+            mail.send(msg)
+            print("successful sending")
+            msg = Message("Customer Receipt", sender=app.config['MAIL_USERNAME'], recipients=[receiver])
+            main_ = "Details of the Order Placed:\n\n"
+            msg.body = main_ + f"Order Id: {order_id} \n Files: {','.join(files)} \n Price: ${amount} \n type: {psize} \n Sides: {side} \n ABN: {ABN} \n Company: {COMPANY}"
+            mail.send(msg)
+            print("to the client")
+
+            for pth in fpath:
+                if os.path.isfile(pth) and os.path.exists(pth):
+                    os.remove(pth)
+                    continue
+                continue
+
+
+        payload = request.get_json()
+
+        print(payload)
+        metadata = payload['data']['object']['charges']['data'][0]['metadata']
+        order_id = int(metadata['order_id'])
+        charge_id = payload['data']['object']['charges']['data'][0]['id']
+        sig_header = request.headers.get('Stripe_Signature', None)
+        files = json.loads(metadata['files'])
+        user_id = int(metadata['user_id'])
+        amount = float(metadata['amount'])
+
+        # if not sig_header:
+        #     return 'No Signature Header!', 400
+
+        # try:
+        #     event = stripe.Webhook.construct_event(
+        #         payload, sig_header, endpoint_secret
+        #     )
+        # except ValueError as e:
+        #     # Invalid payload
+        #     return 'Invalid payload', 400
+        # except stripe.error.SignatureVerificationError as e:
+        #     # Invalid signature
+        #     return 'Invalid signature', 400
+
+        if payload['type'] == 'payment_intent.succeeded':
+            print("In payload Part")
+            email = payload['data']['object'][
+                'receipt_email']  # contains the email that will recive the recipt for the payment (users email usually)
+            sqlq = "INSERT INTO payments (user_id,order_id,amount, charged_id, is_successful) VALUES (%s,%s,%s,%s,%s)"
+            insert_data = (user_id, order_id, amount, charge_id, 1)
+            cur = mysql.connection.cursor()
+            cur.execute(sqlq, insert_data)
+            mysql.connection.commit()
+
+            ftch = "SELECT sides, size, type from orders WHERE order_id = %s"
+            cur.execute(ftch, (order_id,))
+            res = cur.fetchone()
+            cur.close()
+            sides = res[0]
+            psize = res[1]+"_"+res[2]
+            threading.Thread(target=send_attachment, args=(order_id, files, psize, sides, amount, email)).start()
+
+            return {"message":"OK"},200
+        else:
+            print("In Else Part")
+            return 'Unexpected event type', 400
+    except Exception as e:
+        print(e)
+        return '', 200
+
+
+app.post('/api/v1/files/file-cart-upload')
+def cart_upload():
+    @copy_current_request_context
+    def travers_file(final_result: list, files: list, size: str, typ: str, side: str, dtime: str, user_id: int = None):
+        num_dict = {"numbers": []}
+        total_pages = 0
+        print("Thread Started")
+        for file in files:
+            print(">}>}" * 20, file)
+            print(file.mimetype)
+            filename = typ + "_" + size + "_" + side + "_" + str(dtime) + "_" + secure_filename(file.filename)
+            print(filename)
+            if file.mimetype == "app/pdf":
+                npath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(npath)
+                with open(npath, 'rb') as fpath:
+                    read_pdf = pypdf.PdfFileReader(fpath)
+                    num_pages = read_pdf.getNumPages()
+                    num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
+                    print("NUM DICT +++", num_dict)
+                    total_pages += num_pages
+
+            if file.mimetype == "image/jpeg" or file.mimetype == "image/png" or file.mimetype == "image/jpg":
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                if 'Total_Images' in num_dict.keys():
+                    num_dict['Total_Images'] += 1
+                else:
+                    num_dict['Total_Images'] = 1
+                total_pages += 1
+
+            if file.mimetype in MIME:
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                source = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                destination = app.config['UPLOAD_FOLDER']
+                output = subprocess.run(
+                    ["libreoffice", '--headless', '--convert-to', 'pdf', source, '--outdir', destination])
+                print(output)
+                new_dest = os.path.splitext(destination + f'/{filename}')[0] + ".pdf"
+                with open(new_dest, 'rb') as fpath:
+                    read_pdf = pypdf.PdfFileReader(fpath)
+                    num_pages = read_pdf.getNumPages()
+                    num_dict['numbers'].append({"filename": filename, 'pages': num_pages})
+                    print(num_pages)
+                    total_pages += num_pages
+                print("On Going")
+
+        num_dict['Total_Pages'] = total_pages
+        if size == "A4" and typ.lower() == 'color':
+            num_dict['Total_cost'] = round(A4_C(total_pages), 2)
+        if size == "A4" and typ.lower() == 'bw':
+            num_dict['Total_cost'] = round(A4_BC(total_pages), 2)
+        if size == "A3" and typ.lower() == 'color':
+            num_dict['Total_cost'] = round(A3_C(total_pages), 2)
+        if size == "A3" and typ.lower() == 'bw':
+            num_dict['Total_cost'] = round(A3_BC(total_pages), 2)
+        num_dict['page_format'] = side
+        print(num_dict)
+        final_result.append(num_dict)
+
+    metadata = json.loads(request.form.get('metadata'))
+    meta_data = metadata['metadata']
+    # user_id = meta_data['user_id']
+    current_tp = str(time.time())
+    traverse_files = time.perf_counter()
+
+    thread_list = []
+    final_result = []
+    for data in meta_data:
+        num_dict = {"numbers": []}
+        size, typ = request.form[data['docFormat']].split('_')
+        # TODO: check for every attributes and vaule is not null
+        # TODO: fetch files and check for extension
+        # TODO: Travers files and calculate page numbers and do ohter perfomantion -- done
+        # TODO: calculate price and numbers and file details for current iteration and append it to global response
+        files = request.files.getlist(data["files"])
+        side = request.form.get(data['sides'], "")
+        check_extension_start = time.perf_counter()
+
+        if False in [allowed_file(file.filename) for file in files]:
+            return jsonify({"message": "check your file type", "allowed": list(ALLOWED_EXTENSIONS)}), 422
+        print("Checking file extension as Taken time:", time.perf_counter() - check_extension_start)
+
+        th = threading.Thread(target=travers_file, args=(final_result, files, size, typ, side, current_tp))
+        th.start()
+        thread_list.append(th)
+    print("Thread started")
+    for thread in thread_list:
+        thread.join()
+    end_traversal = time.perf_counter()
+    print(final_result)
+    print("Estimated Time Taken By File Traversal and Page Calculation is: ", end_traversal - traverse_files)
+    return {"traversl_time": (end_traversal - traverse_files), "final_result": final_result}
+
+
+@app.route('/user', methods=['GET'])
+def user():
+    return "OK", 200
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True, threaded=True)
+    app.run(host="0.0.0.0", port=8000, debug=False, threaded=True)
+
