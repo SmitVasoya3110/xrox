@@ -724,6 +724,7 @@ def cart_upload():
                     num_dict['Total_Images'] += 1
                 else:
                     num_dict['Total_Images'] = 1
+                num_dict['numbers'].append({"filename": filename, 'pages': 1})
                 total_pages += 1
 
             if file.mimetype in MIME:
@@ -744,13 +745,13 @@ def cart_upload():
 
         num_dict['Total_Pages'] = total_pages
         if size == "A4" and typ.lower() == 'color':
-            num_dict['Total_cost'] = round(A4_C(total_pages), 2)
+            num_dict['Total_cost'] = A4_C(total_pages), 2
         if size == "A4" and typ.lower() == 'bw':
-            num_dict['Total_cost'] = round(A4_BC(total_pages), 2)
+            num_dict['Total_cost'] = total_pages
         if size == "A3" and typ.lower() == 'color':
-            num_dict['Total_cost'] = round(A3_C(total_pages), 2)
+            num_dict['Total_cost'] = A3_C(total_pages)
         if size == "A3" and typ.lower() == 'bw':
-            num_dict['Total_cost'] = round(A3_BC(total_pages), 2)
+            num_dict['Total_cost'] = A3_BC(total_pages)
         num_dict['page_format'] = side
         print(num_dict)
         final_result.append(num_dict)
