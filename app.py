@@ -288,7 +288,6 @@ def register_user():  # add new Customer -- MYSQL table : Customer_Master
 #     return "Server is Up and running"
 
 @app.route('/multiple-files-upload', methods=['POST'])
-@jwt_required()
 def upload_file():
     try:
         print("In Upload API")
@@ -373,7 +372,6 @@ job_msg = "Your job as an email posted"
 
 
 @app.route('/place/order', methods=["POST"])
-@jwt_required()
 def place_order():
     try:
         try:
@@ -422,7 +420,7 @@ def place_order():
 #     return {"Res": res}
 
 
-@jwt_required()
+
 @app.route('/confirm/order', methods=["POST"])
 def confirm_payment():
     @copy_current_request_context
@@ -471,7 +469,7 @@ def confirm_payment():
         return {"message": "OK"}, 200
 
 
-# @jwt_required()
+# 
 # @app.route('/uploads', methods=["POST"])
 # def attach_mail():
 #     files_details = []
@@ -575,7 +573,6 @@ def reset_password():
 
 
 @app.route('/refresh-token', methods=['POST', 'GET'])
-@jwt_required()
 def refresh_token():
     # retrive the user's identity from the refresh token using a Flask-JWT-Extended built-in method
     current_user = get_jwt_identity()
