@@ -696,7 +696,7 @@ def webhook():
         return '', 200
 
 
-app.post('/api/v1/files/file-cart-upload')
+@app.post('/api/v1/files/file-cart-upload')
 def cart_upload():
     @copy_current_request_context
     def travers_file(final_result: list, files: list, size: str, typ: str, side: str, dtime: str, user_id: int = None):
