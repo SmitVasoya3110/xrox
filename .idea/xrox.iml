@@ -7,8 +7,9 @@
       <excludeFolder url="file://$MODULE_DIR$/mysql_db_data_container/performance_schema" />
       <excludeFolder url="file://$MODULE_DIR$/mysql_db_data_container/sys" />
       <excludeFolder url="file://$MODULE_DIR$/uploads" />
+      <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="Python 3.9 (xrox)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

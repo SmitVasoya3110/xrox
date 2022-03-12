@@ -40,10 +40,10 @@ app.config['MAIL_USE_SSL'] = True
 app.config['ORDER_MAIL'] = "websdaily@gmail.com"
 mail = Mail(app)
 
-app.config['MYSQL_HOST'] = 'db'  # db
+app.config['MYSQL_HOST'] = 'localhost'  # db
 app.config['MYSQL_USER'] = 'root'  # root
 # app.config['MYSQL_PORT'] = 3306
-app.config['MYSQL_PASSWORD'] = 'print1234'  # print1234
+app.config['MYSQL_PASSWORD'] = 'root1234'  # print1234
 app.config['MYSQL_DB'] = "print"
 mysql = MySQL(app)
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 24
@@ -194,6 +194,9 @@ def CustomerLogin():
 
             # res = jsonify(dic1)
             # res.status_code = 200
+            print(dic1)
+            if not os.path.isdir(os.path.join(app.config['UPLOAD_FOLDER'], str(dic2['uuid']))):
+                os.mkdir(os.path.join(app.config['UPLOAD_FOLDER'], str(dic2['uuid'])))
             return dic1
 
             # return res
@@ -745,7 +748,7 @@ def cart_upload():
 
         num_dict['Total_Pages'] = total_pages
         if size == "A4" and typ.lower() == 'color':
-            num_dict['Total_cost'] = A4_C(total_pages), 2
+            num_dict['Total_cost'] = A4_C(total_pages)
         if size == "A4" and typ.lower() == 'bw':
             num_dict['Total_cost'] = total_pages
         if size == "A3" and typ.lower() == 'color':
@@ -796,6 +799,56 @@ def cart_upload():
 def user():
     return "OK", 200
 
+
+@app.route('/upload-to-cart', methods=['POST'])
+def upload_to_cart():
+    # json_data = request.get_json()
+    user_id = request.form.get('user_id')
+    files = request.files.getlist('files[]')
+    typ, size = request.form.get('pageFormat').split('_')
+    side = request.form.get('docFormat')
+    tstamp = request.form.get('timestamp')
+    server_stamp = str(time.time())
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], str(user_id), str(tstamp))
+
+    if not os.path.isdir(file_path):
+        os.mkdir(file_path)
+
+    if False in [allowed_file(file.filename) for file in files]:
+        return jsonify({"message": "check your file type", "allowed": list(ALLOWED_EXTENSIONS)}), 422
+
+    for file in files:
+        print(">}>}" * 20, file)
+        print(file.mimetype)
+        filename = str(user_id)+"_"+typ + "_" + size + "_" + side + "_" + server_stamp + "_" + secure_filename(file.filename)
+        print(filename)
+        npath = os.path.join(file_path, filename)
+        file.save(npath)
+
+    return jsonify({"Message": "Your files have been successfully uploaded"}), 200
+
+
+@app.route('/fetch-user-files', methods=["GET"])
+def fetch_user_files():
+    json_data = request.get_json()
+    user_id = json_data.get('user_id', 0)
+    tstamp = json_data.get('timestamp', 0)
+    if not user_id or not tstamp:
+        return jsonify({"message":"provide user_id and timestamp properly"}), 402
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], str(user_id), str(tstamp))
+    list_files = os.listdir(file_path)
+    file_res = []
+    for file in list_files:
+        uid,size,typ,page_format,dstamp,filename = file.rsplit('_',5)
+        dict_file = {
+            "size": size,
+            "type": typ,
+            "page_format": page_format,
+            "filename": filename,
+            "server_file_name": file
+        }
+        file_res.append(dict_file)
+    return jsonify({"files": file_res}), 200
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=8000, debug=True, threaded=True)
 
